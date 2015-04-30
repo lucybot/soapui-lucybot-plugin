@@ -1,7 +1,7 @@
-SoapUI Swagger Plugin
+SoapUI LucyBot Plugin
 -----------------------------
 
-Adds Swagger-related functionality to SoapUI. See https://github.com/olensmar/soapui-swagger-plugin for more info.
+Adds ability to launch a LucyBot developer portal from SoapUI.
 
 Install by unzipping into SoapUI/bin folder.
 
