@@ -13,6 +13,7 @@ import com.eviware.soapui.impl.rest.RestService;
 import com.eviware.soapui.impl.settings.XmlBeansSettingsImpl;
 import com.eviware.x.form.XFormDialog;
 import com.eviware.x.form.XFormOptionsField;
+import com.eviware.x.form.support.XFormRadioGroup;
 import com.eviware.x.form.support.ADialogBuilder;
 import com.eviware.x.form.support.AField;
 import com.eviware.x.form.support.AField.AFieldType;
@@ -24,7 +25,6 @@ import java.net.URI;
 
 @ActionConfiguration(actionGroup = "EnabledWsdlProjectActions")
 public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
-		private static final String BASE_PATH = Form.class.getName() + Form.BASEPATH;
 		private static final String VERSION = Form.class.getName() + Form.VERSION;
 
 	  private XFormDialog dialog;
@@ -46,31 +46,38 @@ public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
 					dialog = ADialogBuilder.buildDialog(Form.class);
 
 					dialog.setValue(Form.VERSION, settings.getString(VERSION, "1.0"));
-					dialog.setValue(Form.BASEPATH, settings.getString(BASE_PATH, ""));
-			}
+					dialog.setValue(Form.HOST, "api.example.com");
 
-			XFormOptionsField apis = (XFormOptionsField) dialog.getFormField(Form.APIS);
-			apis.setOptions(ModelSupport.getNames(project.getInterfaces(RestServiceFactory.REST_TYPE)));
+					XFormRadioGroup apis = (XFormRadioGroup) dialog.getFormField(Form.API);
+					String[] apiNames = ModelSupport.getNames(project.getInterfaces(RestServiceFactory.REST_TYPE));
+					apis.setOptions(apiNames);
+					apis.setValue(apiNames[0]);
+
+					XFormOptionsField protocols = (XFormOptionsField) dialog.getFormField(Form.PROTOCOLS);
+					String[] protocolOptions = {"http", "https"};
+					protocols.setOptions(protocolOptions);
+					protocols.setSelectedOptions(protocolOptions);
+			}
 
 			while (dialog.show()) {
 					try {
-							Object[] options = ((XFormOptionsField) dialog.getFormField(Form.APIS)).getSelectedOptions();
-							if (options.length == 0) {
-									throw new Exception("You must select at least one REST API ");
+							Object[] protocolObjs = ((XFormOptionsField) dialog.getFormField(Form.PROTOCOLS)).getSelectedOptions();
+							if (protocolObjs.length == 0) {
+									throw new Exception("You must select at least one protocol");
 							}
 
-							RestService[] services = new RestService[options.length];
-							for (int c = 0; c < options.length; c++) {
-									services[c] = (RestService) project.getInterfaceByName(String.valueOf(options[c]));
-									if (services[c].getEndpoints().length == 0) {
-											throw new Exception("Selected APIs must contain at least one endpoint");
-									}
+							String[] selectedProtocols = new String[protocolObjs.length];
+							for (int i = 0; i < selectedProtocols.length; ++i) {
+								selectedProtocols[i] = String.valueOf(protocolObjs[i]);
 							}
 
-							// double-check
-							if (services.length == 0) {
-									throw new Exception("You must select at least one REST API to export");
+							String api = dialog.getValue(Form.API);
+              RestService service = (RestService) project.getInterfaceByName(api);
+							if (service.getEndpoints().length == 0) {
+									throw new Exception("Selected API must contain at least one endpoint");
 							}
+
+							String host = dialog.getValue(Form.HOST);
 
 							String version = dialog.getValue(Form.VERSION);
 							if (StringUtils.isNullOrEmpty(version)) {
@@ -78,9 +85,8 @@ public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
 							}
 
 							Swagger2Exporter exporter = new Swagger2Exporter(project);
-							String id = exporter.exportToLucyBot(version,
-												"json", services, dialog.getValue(Form.BASEPATH));
-			        String message = "Hurray! Your LucyBot portal is ready! You can see it at ";
+							String id = exporter.exportToLucyBot(service, version, host, selectedProtocols);
+			        String message = "Your LucyBot portal is ready! You can see it at ";
 							String url = "lucybot.com/trial/" + id;
 							message += url + '\n';
 							message += "Do you want to go there now?";
@@ -94,15 +100,27 @@ public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
 			}
     }
 
-		@AForm(name = "Generate LucyBot Portal", description = "Creates a LucyBot portal for selected REST APIs in this project")
+		@AForm(name = "Generate LucyBot Portal",
+		       description = "Create a LucyBot portal for one of your REST APIs. The portal will be private until you publish it.")
 		public interface Form {
-				@AField(name = "APIs", description = "Select which REST APIs to include in the Swagger definition", type = AFieldType.MULTILIST)
-				public final static String APIS = "APIs";
+				@AField(name = "API",
+								description = "Select which REST API to view on LucyBot",
+								type = AFieldType.RADIOGROUP)
+				public final static String API = "API";
 
-				@AField(name = "API Version", description = "API Version", type = AFieldType.STRING)
+				@AField(name = "Host",
+				 				description = "IP address or domain that the API will be hosted on (port optional)",
+								type = AFieldType.STRING)
+				public final static String HOST = "Host";
+
+				@AField(name = "API Version",
+				        description = "API Version",
+								type = AFieldType.STRING)
 				public final static String VERSION = "API Version";
 
-				@AField(name = "Base Path", description = "Base Path that the Swagger definition will be hosted on", type = AFieldType.STRING)
-				public final static String BASEPATH = "Base Path";
+				@AField(name = "Protocols",
+				        description="Select which protocols your API supports",
+				        type = AFieldType.MULTILIST)
+				public final static String PROTOCOLS = "Protocols";
 		}
 }

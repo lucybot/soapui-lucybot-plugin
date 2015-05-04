@@ -27,6 +27,7 @@ import com.wordnik.swagger.models.Info
 import com.wordnik.swagger.models.Operation
 import com.wordnik.swagger.models.Path
 import com.wordnik.swagger.models.Response
+import com.wordnik.swagger.models.Scheme
 import com.wordnik.swagger.models.Swagger
 import com.wordnik.swagger.models.parameters.BodyParameter
 import com.wordnik.swagger.models.parameters.HeaderParameter
@@ -46,7 +47,7 @@ import java.util.regex.*
  * @author Ole Lensmar
  */
 
-class Swagger2Exporter implements SwaggerExporter {
+class Swagger2Exporter {
 
     private final WsdlProject project
 
@@ -56,48 +57,49 @@ class Swagger2Exporter implements SwaggerExporter {
         this.project = project
     }
 
-    @Override
-    String exportToLucyBot(String apiVersion, String format, RestService[] services, String basePath) {
+    String exportToLucyBot(RestService service, String apiVersion, String host, String[] protocols) {
         Swagger swagger = new Swagger();
-        swagger.basePath = basePath
+
         swagger.info = new Info()
-
+        swagger.host = host
+        protocols.each {
+          swagger.addScheme(Scheme.forValue(it))
+        }
         swagger.info.version = apiVersion
-        swagger.info.title = services[0].name
+        swagger.info.title = service.name
 
-        services.each {
-            it.allResources.each {
-                Path p = new Path()
+        swagger.basePath = service.getBasePath()
+        service.allResources.each {
+            Path p = new Path()
 
-                it.restMethodList.each {
-                    Operation operation = new Operation()
-                    operation.operationId = it.resource.name
+            it.restMethodList.each {
+                Operation operation = new Operation()
+                operation.operationId = it.resource.name
 
-                    it.representations.each {
-                        if (it.type == RestRepresentation.Type.RESPONSE || it.type == RestRepresentation.Type.FAULT)
-                            it.status?.each { operation.addResponse(String.valueOf(it), new Response()) }
-                        else if (it.type == RestRepresentation.Type.REQUEST && it.mediaType != null)
-                            operation.addConsumes(it.mediaType)
-                    }
-
-                    p.set(it.method.name().toLowerCase(), operation)
-
-                    addParametersToOperation(it.params, operation)
-                    addParametersToOperation(it.overlayParams, operation)
-
-                    if (it.method == RestRequestInterface.HttpMethod.POST || it.method == RestRequestInterface.HttpMethod.PUT) {
-                        def param = new BodyParameter()
-                        operation.addParameter(param)
-                        param.name = "body"
-                        param.description = "Request body"
-                        param.required = true
-                    }
+                it.representations.each {
+                    if (it.type == RestRepresentation.Type.RESPONSE || it.type == RestRepresentation.Type.FAULT)
+                        it.status?.each { operation.addResponse(String.valueOf(it), new Response()) }
+                    else if (it.type == RestRepresentation.Type.REQUEST && it.mediaType != null)
+                        operation.addConsumes(it.mediaType)
                 }
 
-                swagger.path(it.fullPath, p)
+                p.set(it.method.name().toLowerCase(), operation)
+
+                addParametersToOperation(it.params, operation)
+                addParametersToOperation(it.overlayParams, operation)
+
+                if (it.method == RestRequestInterface.HttpMethod.POST || it.method == RestRequestInterface.HttpMethod.PUT) {
+                    def param = new BodyParameter()
+                    operation.addParameter(param)
+                    param.name = "body"
+                    param.description = "Request body"
+                    param.required = true
+                }
             }
+
+            swagger.path(it.fullPath, p)
         }
-        URL url = new URL("http://52.10.167.33:3001/v1/trial/swagger");
+        URL url = new URL("https://api.lucybot.com/v1/trial/swagger");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST")
         conn.setRequestProperty("Content-Type", "application/json")
