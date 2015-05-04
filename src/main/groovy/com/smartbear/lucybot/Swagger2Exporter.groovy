@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package com.smartbear.swagger
+package com.smartbear.lucybot
 
 import com.eviware.soapui.impl.rest.RestRepresentation
 import com.eviware.soapui.impl.rest.RestRequestInterface
@@ -34,7 +34,11 @@ import com.wordnik.swagger.models.parameters.Parameter
 import com.wordnik.swagger.models.parameters.PathParameter
 import com.wordnik.swagger.models.parameters.QueryParameter
 import com.wordnik.swagger.util.Json
-import com.wordnik.swagger.util.Yaml
+
+import java.net.HttpURLConnection
+import java.io.*
+import java.util.regex.*
+
 
 /**
  * A simple Swagger exporter - now uses swagger4j library
@@ -46,12 +50,14 @@ class Swagger2Exporter implements SwaggerExporter {
 
     private final WsdlProject project
 
+    private Pattern ID_PATTERN = Pattern.compile("\"id\":\\s*\"(\\w+)\"")
+
     public Swagger2Exporter(WsdlProject project) {
         this.project = project
     }
 
-    String exportToFolder(String path, String apiVersion, String format, RestService[] services, String basePath) {
-
+    @Override
+    String exportToLucyBot(String apiVersion, String format, RestService[] services, String basePath) {
         Swagger swagger = new Swagger();
         swagger.basePath = basePath
         swagger.info = new Info()
@@ -91,11 +97,30 @@ class Swagger2Exporter implements SwaggerExporter {
                 swagger.path(it.fullPath, p)
             }
         }
+        URL url = new URL("http://52.10.167.33:3001/v1/trial/swagger");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST")
+        conn.setRequestProperty("Content-Type", "application/json")
+        conn.setRequestProperty("Accept", "application/json")
+        conn.setDoOutput(true)
+        conn.connect()
 
-        ObjectMapper mapper = format.equals("yaml") ? Yaml.mapper() : Json.mapper();
-        mapper.writeValue(new FileWriter(path + File.separatorChar + "api-docs." + format), swagger);
+        DataOutputStream wr = new DataOutputStream(conn.getOutputStream())
+        wr.writeBytes(Json.mapper().writeValueAsString(swagger))
+        wr.flush();
+        wr.close();
 
-        return path;
+        InputStreamReader input = new InputStreamReader(conn.getInputStream());
+        BufferedReader reader = new BufferedReader(input);
+        String nextLine = ""
+        String response = ""
+        while(nextLine != null) {
+          response += nextLine
+          nextLine = reader.readLine()
+        }
+        reader.close()
+        Matcher idMatcher = ID_PATTERN.matcher(response)
+        return idMatcher.find() ? idMatcher.group(1) : null;
     }
 
     private void addParametersToOperation(RestParamsPropertyHolder params, Operation op) {
