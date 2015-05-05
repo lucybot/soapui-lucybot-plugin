@@ -3,8 +3,10 @@ package com.smartbear.lucybot;
 import com.eviware.soapui.plugins.PluginAdapter;
 import com.eviware.soapui.plugins.PluginConfiguration;
 
+
 /**
- * Created by bbrennan on 04/30/2015.
+ *
+ * @author Bobby Brennan
  */
 
 @PluginConfiguration(

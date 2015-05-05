@@ -40,11 +40,9 @@ import java.net.HttpURLConnection
 import java.io.*
 import java.util.regex.*
 
-
 /**
- * A simple Swagger exporter - now uses swagger4j library
  *
- * @author Ole Lensmar
+ * @author Bobby Brennan
  */
 
 class Swagger2Exporter {
@@ -97,7 +95,7 @@ class Swagger2Exporter {
                 }
             }
 
-            swagger.path(it.fullPath, p)
+            swagger.path(it.getFullPath(false), p)
         }
         URL url = new URL("https://api.lucybot.com/v1/trial/swagger");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -163,8 +161,12 @@ class Swagger2Exporter {
     }
 
     boolean operationHasParameter(Operation operation, String name) {
-        operation?.parameters.each { if (it.name == name) return true }
-
-        return false
+        boolean found = false
+        operation.parameters.each {
+          if (it.name == name) {
+            found = true
+          }
+        }
+        return found
     }
 }
