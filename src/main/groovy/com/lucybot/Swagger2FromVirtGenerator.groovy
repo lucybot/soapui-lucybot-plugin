@@ -13,7 +13,7 @@
  *  limitations under the License.
  */
 
-package com.smartbear.lucybot
+package com.lucybot
 
 import com.eviware.soapui.impl.rest.RestRequestInterface
 import com.eviware.soapui.impl.rest.RestResource

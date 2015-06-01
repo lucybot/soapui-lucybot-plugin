@@ -1,4 +1,4 @@
-package com.smartbear.lucybot;
+package com.lucybot;
 
 import com.eviware.soapui.plugins.PluginAdapter;
 import com.eviware.soapui.plugins.PluginConfiguration;
