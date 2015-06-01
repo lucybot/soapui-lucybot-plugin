@@ -45,6 +45,7 @@ import java.util.regex.*
  */
 
 class Swagger2Exporter {
+    private static final String LUCYBOT_API_HOST = "https://api.lucybot.com";
 
     private final WsdlProject project
 
@@ -96,7 +97,7 @@ class Swagger2Exporter {
 
             swagger.path(it.getFullPath(false), p)
         }
-        URL url = new URL("https://api.lucybot.com/v1/trial/swagger");
+        URL url = new URL(LUCYBOT_API_HOST + "/v1/trial/swagger");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST")
         conn.setRequestProperty("Content-Type", "application/json")

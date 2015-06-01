@@ -30,6 +30,8 @@ import java.net.URI;
 
 @ActionConfiguration(actionGroup = "EnabledWsdlProjectActions")
 public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
+	  private static final String LUCYBOT_HOST = "https://lucybot.com";
+
 		private static final String VERSION = ExportForm.class.getName() + ExportForm.VERSION;
 		private static final String[] WELCOME_OPTIONS = {
 			"See an example",
@@ -61,11 +63,11 @@ public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
 		}
 
 		private void showExample() {
-			openURL("https://lucybot.com/portals/hacker_news");
+			openURL("/portals/hacker_news");
 		}
 
 		private void showTutorial() {
-      openURL("https://lucybot.com/demo");
+      openURL("/demo");
 		}
 
 		private void uploadAPI(WsdlProject project) {
@@ -121,12 +123,12 @@ public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
 							Swagger2Exporter exporter = new Swagger2Exporter(project);
 							String id = exporter.exportToLucyBot(service, version, host, selectedProtocols);
 			        String message = "Your LucyBot portal is ready! You can see it at ";
-							String url = "lucybot.com/demo/" + id;
-							message += url + '\n';
+							String url = "/demo_portal/" + id;
+							message += "lucybot.com" + url + '\n';
 							message += "Do you want to go there now?";
 							boolean shouldOpen = UISupport.confirm(message, "Open LucyBot Portal");
 							if (shouldOpen) {
-              	openURL("https://" + url + "?nohelp=true");
+              	openURL(url + "?nohelp=true");
 							}
 					} catch (Exception ex) {
 							UISupport.showErrorMessage(ex);
@@ -136,7 +138,7 @@ public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
 
 		private void openURL(String url) {
 			try {
-				URI uri = new URI(url);
+				URI uri = new URI(LUCYBOT_HOST + url);
 				Desktop.getDesktop().browse(uri);
 			} catch (Exception ex) {
 				UISupport.showErrorMessage(ex);
