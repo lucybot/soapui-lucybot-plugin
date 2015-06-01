@@ -45,128 +45,127 @@ import java.util.regex.*
  */
 
 class Swagger2Exporter {
-    private static final String LUCYBOT_API_HOST = "https://api.lucybot.com";
+  private static final String LUCYBOT_API_HOST = "https://api.lucybot.com";
 
-    private final WsdlProject project
+  private final WsdlProject project
 
-    private Pattern ID_PATTERN = Pattern.compile("\"id\":\\s*\"(\\w+)\"")
+  private Pattern ID_PATTERN = Pattern.compile("\"id\":\\s*\"(\\w+)\"")
 
-    public Swagger2Exporter(WsdlProject project) {
-        this.project = project
+  public Swagger2Exporter(WsdlProject project) {
+    this.project = project
+  }
+
+  String exportToLucyBot(RestService service, String apiVersion, String host, String[] protocols) {
+    Swagger swagger = new Swagger();
+
+    swagger.info = new Info()
+    swagger.host = host
+    protocols.each {
+      swagger.addScheme(Scheme.forValue(it))
     }
+    swagger.info.version = apiVersion
+    swagger.info.title = service.name
 
-    String exportToLucyBot(RestService service, String apiVersion, String host, String[] protocols) {
-        Swagger swagger = new Swagger();
+    swagger.basePath = service.getBasePath()
+    service.allResources.each {
+      Path p = new Path()
 
-        swagger.info = new Info()
-        swagger.host = host
-        protocols.each {
-          swagger.addScheme(Scheme.forValue(it))
-        }
-        swagger.info.version = apiVersion
-        swagger.info.title = service.name
+      it.restMethodList.each {
+        Operation operation = new Operation()
+        operation.operationId = it.resource.name
 
-        swagger.basePath = service.getBasePath()
-        service.allResources.each {
-            Path p = new Path()
-
-            it.restMethodList.each {
-                Operation operation = new Operation()
-                operation.operationId = it.resource.name
-
-                it.representations.each {
-                    if (it.type == RestRepresentation.Type.RESPONSE || it.type == RestRepresentation.Type.FAULT)
-                        it.status?.each { operation.addResponse(String.valueOf(it), new Response()) }
-                    else if (it.type == RestRepresentation.Type.REQUEST && it.mediaType != null)
-                        operation.addConsumes(it.mediaType)
-                }
-
-                p.set(it.method.name().toLowerCase(), operation)
-
-                addParametersToOperation(it.params, operation)
-                addParametersToOperation(it.overlayParams, operation)
-
-                if (it.method == RestRequestInterface.HttpMethod.POST || it.method == RestRequestInterface.HttpMethod.PUT) {
-                    def param = new BodyParameter()
-                    operation.addParameter(param)
-                    param.name = "body"
-                    param.description = "Request body"
-                    param.required = true
-                }
-            }
-
-            swagger.path(it.getFullPath(false), p)
-        }
-        URL url = new URL(LUCYBOT_API_HOST + "/v1/trial/swagger");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST")
-        conn.setRequestProperty("Content-Type", "application/json")
-        conn.setRequestProperty("Accept", "application/json")
-        conn.setDoOutput(true)
-        conn.connect()
-
-        DataOutputStream wr = new DataOutputStream(conn.getOutputStream())
-        wr.writeBytes(Json.mapper().writeValueAsString(swagger))
-        wr.flush();
-        wr.close();
-
-        InputStreamReader input = new InputStreamReader(conn.getInputStream());
-        BufferedReader reader = new BufferedReader(input);
-        String nextLine = ""
-        String response = ""
-        while(nextLine != null) {
-          response += nextLine
-          nextLine = reader.readLine()
-        }
-        reader.close()
-        Matcher idMatcher = ID_PATTERN.matcher(response)
-        return idMatcher.find() ? idMatcher.group(1) : null;
-    }
-
-    private void addParametersToOperation(RestParamsPropertyHolder params, Operation op) {
-
-        for (name in params.getPropertyNames()) {
-            def param = params.getProperty(name)
-            if (!operationHasParameter(op, name)) {
-                Parameter p = null
-
-                switch (param.style) {
-                    case ParameterStyle.HEADER: p = new HeaderParameter(); break;
-                    case ParameterStyle.QUERY: p = new QueryParameter(); break;
-                    case ParameterStyle.TEMPLATE: p = new PathParameter(); break;
-                }
-
-                if (p != null) {
-                    op.addParameter(p)
-                    p.name = param.name
-                    p.required = p instanceof PathParameter || param.getRequired()
-                    p.description = param.description
-
-                    // needs to be extended to support all schema types
-                    switch (param.type.localPart) {
-                        case "byte": p.type = "byte"; break
-                        case "dateTime": p.type = "Date"; break
-                        case "float": p.type = "float"; break
-                        case "double": p.type = "double"; break
-                        case "long": p.type = "long"; break
-                        case "short":
-                        case "int":
-                        case "integer": p.type = "int"; break
-                        case "boolean": p.type = "boolean"; break
-                        default: p.type = "string"
-                    }
-                }
-            }
-        }
-    }
-
-    boolean operationHasParameter(Operation operation, String name) {
-        boolean found = false
-        operation.parameters.each {
-          if (it.name == name) {
-            found = true
+        it.representations.each {
+          if (it.type == RestRepresentation.Type.RESPONSE || it.type == RestRepresentation.Type.FAULT) {
+            it.status?.each { operation.addResponse(String.valueOf(it), new Response()) }
+          } else if (it.type == RestRepresentation.Type.REQUEST && it.mediaType != null) {
+            operation.addConsumes(it.mediaType)
           }
         }
-        return found
+
+        p.set(it.method.name().toLowerCase(), operation)
+
+        addParametersToOperation(it.params, operation)
+        addParametersToOperation(it.overlayParams, operation)
+
+        if (it.method == RestRequestInterface.HttpMethod.POST || it.method == RestRequestInterface.HttpMethod.PUT) {
+          def param = new BodyParameter()
+          operation.addParameter(param)
+          param.name = "body"
+          param.description = "Request body"
+          param.required = true
+        }
+      }
+
+      swagger.path(it.getFullPath(false), p)
     }
+    URL url = new URL(LUCYBOT_API_HOST + "/v1/trial/swagger");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("POST")
+    conn.setRequestProperty("Content-Type", "application/json")
+    conn.setRequestProperty("Accept", "application/json")
+    conn.setDoOutput(true)
+    conn.connect()
+
+    DataOutputStream wr = new DataOutputStream(conn.getOutputStream())
+    wr.writeBytes(Json.mapper().writeValueAsString(swagger))
+    wr.flush();
+    wr.close();
+
+    InputStreamReader input = new InputStreamReader(conn.getInputStream());
+    BufferedReader reader = new BufferedReader(input);
+    String nextLine = ""
+    String response = ""
+    while(nextLine != null) {
+      response += nextLine
+      nextLine = reader.readLine()
+    }
+    reader.close()
+    Matcher idMatcher = ID_PATTERN.matcher(response)
+    return idMatcher.find() ? idMatcher.group(1) : null;
+  }
+
+  private void addParametersToOperation(RestParamsPropertyHolder params, Operation op) {
+    for (name in params.getPropertyNames()) {
+      def param = params.getProperty(name)
+      if (!operationHasParameter(op, name)) {
+        Parameter p = null
+        switch (param.style) {
+          case ParameterStyle.HEADER: p = new HeaderParameter(); break;
+          case ParameterStyle.QUERY: p = new QueryParameter(); break;
+          case ParameterStyle.TEMPLATE: p = new PathParameter(); break;
+        }
+
+        if (p != null) {
+          op.addParameter(p)
+          p.name = param.name
+          p.required = p instanceof PathParameter || param.getRequired()
+          p.description = param.description
+
+          // needs to be extended to support all schema types
+          switch (param.type.localPart) {
+            case "byte": p.type = "byte"; break
+            case "dateTime": p.type = "Date"; break
+            case "float": p.type = "float"; break
+            case "double": p.type = "double"; break
+            case "long": p.type = "long"; break
+            case "short":
+            case "int":
+            case "integer": p.type = "int"; break
+            case "boolean": p.type = "boolean"; break
+            default: p.type = "string"
+          }
+        }
+      }
+    }
+  }
+
+  boolean operationHasParameter(Operation operation, String name) {
+    boolean found = false
+    operation.parameters.each {
+      if (it.name == name) {
+        found = true
+      }
+    }
+    return found
+  }
 }
