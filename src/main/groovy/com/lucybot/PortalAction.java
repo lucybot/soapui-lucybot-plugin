@@ -1,4 +1,4 @@
-package com.smartbear.lucybot;
+package com.lucybot;
 
 import com.eviware.soapui.impl.rest.RestService;
 import com.eviware.soapui.impl.rest.RestServiceFactory;
