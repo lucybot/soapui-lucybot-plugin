@@ -16,7 +16,7 @@ From here you can [view an example](https://lucybot.com/portals/hacker_news), [t
 
 ![LucyBot Upload](https://raw.githubusercontent.com/lucybot/soapui-lucybot-plugin/master/readme/img/upload.png)
 
-Specify the host and protocol for your API console, and click "OK" to push the console to LucyBot. The plugin will generate a [Swagger Specification](http://swagger.io) for the API and upload it to LucyBot, where you're free to preview the result, make changes, and publish to the gallery.
+Select which API you want to upload, specify the host, protocol, and version, and click "OK". The plugin will generate a [Swagger Specification](http://swagger.io) for the API and upload it to LucyBot, where you're free to preview the result, make changes, and publish to the gallery.
 
 
 ## Feedback
