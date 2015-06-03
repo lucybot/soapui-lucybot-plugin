@@ -21,6 +21,7 @@ import com.eviware.soapui.impl.rest.RestService
 import com.eviware.soapui.impl.rest.support.RestParamsPropertyHolder
 import com.eviware.soapui.impl.rest.support.RestParamsPropertyHolder.ParameterStyle
 import com.eviware.soapui.impl.wsdl.WsdlProject
+import com.eviware.soapui.support.UISupport;
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.wordnik.swagger.models.Info
 import com.wordnik.swagger.models.Operation
@@ -106,20 +107,34 @@ class Swagger2Exporter {
     conn.setDoOutput(true)
     conn.connect()
 
-    DataOutputStream wr = new DataOutputStream(conn.getOutputStream())
-    wr.writeBytes(Json.mapper().writeValueAsString(swagger))
-    wr.flush();
-    wr.close();
-
-    InputStreamReader input = new InputStreamReader(conn.getInputStream());
-    BufferedReader reader = new BufferedReader(input);
-    String nextLine = ""
-    String response = ""
-    while(nextLine != null) {
-      response += nextLine
-      nextLine = reader.readLine()
+    DataOutputStream wr = null
+    try {
+      wr = new DataOutputStream(conn.getOutputStream())
+      wr.writeBytes(Json.mapper().writeValueAsString(swagger))
+      wr.flush()
+    } catch (Exception ex) {
+      UISupport.showErrorMessage(ex);
+    } finally {
+      if (wr != null) wr.close()
     }
-    reader.close()
+
+    String response = ""
+    InputStreamReader input = null
+    BufferedReader reader = null
+    try {
+      input = new InputStreamReader(conn.getInputStream());
+      reader = new BufferedReader(input);
+      String nextLine = ""
+      while(nextLine != null) {
+        response += nextLine
+        nextLine = reader.readLine()
+      }
+    } catch (Exception ex) {
+      UISupport.showErrorMessage(ex);
+    } finally {
+      if (reader != null) reader.close()
+      if (input != null) input.close()
+    }
     Matcher idMatcher = ID_PATTERN.matcher(response)
     return idMatcher.find() ? idMatcher.group(1) : null;
   }

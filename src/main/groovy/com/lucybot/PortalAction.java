@@ -20,7 +20,7 @@ import com.eviware.x.form.support.AField.AFieldType;
 import com.eviware.x.form.support.AForm;
 import com.wordnik.swagger.models.Swagger;
 
-import java.awt.Desktop;
+import com.smartbear.ready.util.ReadyTools;
 import java.net.URI;
 
 /**
@@ -138,8 +138,7 @@ public class PortalAction extends AbstractSoapUIAction<WsdlProject> {
 
   private void openURL(String url) {
     try {
-      URI uri = new URI(LUCYBOT_HOST + url);
-      Desktop.getDesktop().browse(uri);
+      ReadyTools.openURL(LUCYBOT_HOST + url);
     } catch (Exception ex) {
       UISupport.showErrorMessage(ex);
     }
