@@ -132,8 +132,12 @@ class Swagger2Exporter {
     } catch (Exception ex) {
       UISupport.showErrorMessage(ex);
     } finally {
-      if (reader != null) reader.close()
-      if (input != null) input.close()
+      try {
+        if (reader != null) reader.close()
+      } catch (Exception ex) {}
+      try {
+        if (input != null) input.close()
+      } catch (Exception ex) {}
     }
     Matcher idMatcher = ID_PATTERN.matcher(response)
     return idMatcher.find() ? idMatcher.group(1) : null;
